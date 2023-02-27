@@ -9,22 +9,19 @@ import SwiftUI
 import WebKit
 
 struct WebView: UIViewRepresentable {
-    let urlString: String
-    @Binding var statusCode: Int?
+    let url: URL
+    @Binding var html: String
+    @Binding var statusCode: Int
     
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
         webView.navigationDelegate = context.coordinator
-        if let url = URL(string: urlString) {
-            webView.load(URLRequest(url: url))
-        }
+        webView.load(URLRequest(url: url))
         return webView
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        if let url = URL(string: urlString) {
-            webView.load(URLRequest(url: url))
-        }
+        webView.load(URLRequest(url: url))
     }
     
     func makeCoordinator() -> Coordinator {
@@ -36,6 +33,17 @@ struct WebView: UIViewRepresentable {
         
         init(parent: WebView) {
             self.parent = parent
+            self.parent.statusCode = 0
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("document.documentElement.outerHTML.toString()") { html, error in
+                if let html = html as? String {
+                    DispatchQueue.main.async {
+                        self.parent.html = html
+                    }
+                }
+            }
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
@@ -52,8 +60,11 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async {
-                self.parent.statusCode = (error as NSError).code
+            let errorCode = (error as NSError).code
+            if errorCode < 0 {
+                DispatchQueue.main.async {
+                    self.parent.statusCode = abs(errorCode)
+                }
             }
         }
     }
