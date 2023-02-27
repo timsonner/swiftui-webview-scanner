@@ -8,12 +8,14 @@
 import SwiftUI
 import WebKit
 
+
 struct WebView: UIViewRepresentable {
     let url: URL
+    @Binding var statusCode: Int?
 
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
-        webView.navigationDelegate = context.coordinator // set the coordinator as the navigation delegate
+        webView.navigationDelegate = context.coordinator
         webView.load(URLRequest(url: url))
         return webView
     }
@@ -24,7 +26,6 @@ struct WebView: UIViewRepresentable {
         Coordinator(self)
     }
 
-    // Coordinator that adopts WKNavigationDelegate
     class Coordinator: NSObject, WKNavigationDelegate {
         let parent: WebView
 
@@ -32,17 +33,10 @@ struct WebView: UIViewRepresentable {
             self.parent = parent
         }
 
-        // Called when the web view receives a response for the navigation request
-        func webView(_ webView: WKWebView, didReceive response: URLResponse) {
-            if let httpResponse = response as? HTTPURLResponse {
-                print("Status Code: \(httpResponse.statusCode)")
-                // Update the parent view with the status code
-                DispatchQueue.main.async {
-                    // Use @Binding or other means to update the status code in the parent view
-                    // parent.statusCode = httpResponse.statusCode
-                }
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            DispatchQueue.main.async {
+                self.parent.statusCode = webView.url != nil ? 200 : nil
             }
         }
     }
 }
-

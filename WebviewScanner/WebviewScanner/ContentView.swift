@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var statusCode: Int? = nil
+    @State var statusCode: Int?
 
     var body: some View {
         VStack {
@@ -17,10 +17,11 @@ struct ContentView: View {
             } else {
                 Text("Loading...")
             }
-            WebView(url: URL(string: "https://www.example.com")!)
+            WebView(url: URL(string: "https://www.example.com")!, statusCode: $statusCode)
         }
     }
 }
+
 
 
 struct ContentView_Previews: PreviewProvider {
