@@ -8,34 +8,52 @@
 import SwiftUI
 import WebKit
 
-
 struct WebView: UIViewRepresentable {
-    let url: URL
+    let urlString: String
     @Binding var statusCode: Int?
-
+    
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
         webView.navigationDelegate = context.coordinator
-        webView.load(URLRequest(url: url))
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
         return webView
     }
-
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
     }
-
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+    
     class Coordinator: NSObject, WKNavigationDelegate {
-        let parent: WebView
-
-        init(_ parent: WebView) {
+        var parent: WebView
+        
+        init(parent: WebView) {
             self.parent = parent
         }
-
-        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        
+        func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+            if let httpResponse = (navigationResponse.response as? HTTPURLResponse) {
+                DispatchQueue.main.async {
+                    self.parent.statusCode = httpResponse.statusCode
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.parent.statusCode = 404
+                }
+            }
+            decisionHandler(.allow)
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             DispatchQueue.main.async {
-                self.parent.statusCode = webView.url != nil ? 200 : nil
+                self.parent.statusCode = (error as NSError).code
             }
         }
     }
